@@ -1,0 +1,7 @@
+anthropic
+google-ads
+pandas
+psycopg2-binary
+flask
+python-dotenv
+gunicorn
