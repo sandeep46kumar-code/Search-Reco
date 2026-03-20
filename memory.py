@@ -182,7 +182,7 @@ def upsert_campaign_config(cfg: dict):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, (
-                cfg["campaign_id"], cfg.get("product", "unknown"),
+                cfg["campaign"], cfg.get("product", "unknown"),
                 cfg.get("kpi", "CPA"), cfg.get("target_value", 250),
                 cfg.get("active", True), cfg.get("scope", "include"),
                 cfg.get("max_actions_per_day", 2),
