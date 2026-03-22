@@ -310,6 +310,37 @@ body{background:var(--off);color:var(--text);font-family:var(--font);font-size:1
       <div><div class="account-banner-tag">ACTIVE ACCOUNT</div></div>
     </div>
 
+    
+    <!-- Attribution config bar -->
+    <div id="attr-bar" style="background:var(--white);border:1px solid var(--border);border-radius:6px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:20px;box-shadow:var(--shadow);flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase">Attribution window</span>
+        <select id="attr-n" onchange="confirmAttrChange(this)" style="font-family:var(--font);font-size:11px;font-weight:600;color:var(--navy);background:var(--blue3);border:1px solid var(--border);padding:4px 8px;border-radius:4px;cursor:pointer">
+          <option value="7">7 days</option>
+          <option value="14" selected>14 days (default)</option>
+          <option value="21">21 days</option>
+          <option value="30">30 days</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase">CPA Target</span>
+        <input type="number" id="cpa-target" value="250" min="1" style="font-family:var(--font);font-size:11px;font-weight:600;color:var(--navy);background:var(--blue3);border:1px solid var(--border);padding:4px 8px;border-radius:4px;width:80px" onchange="confirmCpaChange(this)"/>
+        <span style="font-size:10px;color:var(--text3)">₹</span>
+      </div>
+      <div id="attr-window-label" style="font-size:10px;color:var(--text2);flex:1;text-align:right"></div>
+    </div>
+    <!-- Confirm dialog (hidden) -->
+    <div id="confirm-dialog" style="display:none;position:fixed;inset:0;background:rgba(0,41,112,.4);z-index:500;align-items:center;justify-content:center">
+      <div style="background:var(--white);border-radius:8px;padding:24px 28px;max-width:360px;box-shadow:var(--shadow2)">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px" id="confirm-title">Confirm change</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.6" id="confirm-msg"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button onclick="cancelConfirm()" style="padding:8px 16px;border:1.5px solid var(--border);background:transparent;font-family:var(--font);font-size:11px;font-weight:600;color:var(--text3);cursor:pointer;border-radius:4px">Cancel</button>
+          <button onclick="applyConfirm()" style="padding:8px 16px;background:var(--navy);border:none;font-family:var(--font);font-size:11px;font-weight:600;color:var(--white);cursor:pointer;border-radius:4px" id="confirm-ok">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <div class="stat-row">
       <div class="stat-card"><div class="stat-icon green">✓</div><div class="stat-label">Approved Today</div><div class="stat-value green" id="stat-approved">—</div><div class="stat-sub">recommendations</div></div>
       <div class="stat-card"><div class="stat-icon red">✗</div><div class="stat-label">Rejected</div><div class="stat-value red" id="stat-rejected">—</div><div class="stat-sub">by gatekeeper</div></div>
@@ -519,7 +550,30 @@ function renderRecs(recs){
     const confBadge=r.confidence==='High'?'badge-conf-high':r.confidence==='Medium'?'badge-conf-medium':'badge-conf-low';
     const actions=isApp&&!isNoth?`<div class="rec-actions"><button class="act-btn act-implement" onclick="implement(${r.id||i},this)">Mark Implemented</button><button class="act-btn act-reject" onclick="rejectRec(${r.id||i},this)">Reject</button></div>`:'';
     const rejectReason=!isApp&&r.reject_reason?`<div class="rec-why" style="border-left:2px solid var(--red)">✗ ${r.reject_reason}</div>`:'';
-    return `<div class="rec-card ${cardCls}"><div class="rec-top"><div class="rec-action">${r.action||'—'}</div><div class="rec-badges"><span class="badge badge-type">${(type||'').replace(/_/g,' ')}</span>${r.confidence?`<span class="badge ${confBadge}">${r.confidence}</span>`:''}<span class="badge ${verdBadge}">${verdict}</span></div></div>${r.why?`<div class="rec-why">${r.why}</div>`:''}${rejectReason}<div class="rec-meta">${r.lever?`<div class="rec-meta-item"><strong>lever</strong>${r.lever}</div>`:''} ${cause?.diagnosed_cause?`<div class="rec-meta-item"><strong>cause</strong>${cause.diagnosed_cause}</div>`:''} ${kpiDelta?`<div class="rec-meta-item"><strong>expected</strong>${kpiDelta}</div>`:''} ${r.campaign?`<div class="rec-meta-item"><strong>campaign</strong>${r.campaign}</div>`:''}</div>
+    return `<div class="rec-card ${cardCls}"><div class="rec-top"><div class="rec-action">${r.action||'—'}</div><div class="rec-badges"><span class="badge badge-type">${(type||'').replace(/_/g,' ')}</span>${r.confidence?`<span class="badge ${confBadge}">${r.confidence}</span>`:''}<span class="badge ${verdBadge}">${verdict}</span></div></div>${r.why?`<div class="rec-why">${r.why}</div>`:''}
+      ${(()=>{
+        const regime = payload?.efficiency_regime || r.efficiency_regime;
+        const hardStatus = payload?.hard_target_status || r.hard_target_status;
+        const vsPeers = payload?.vs_peers || r.vs_peers;
+        const basis = payload?.decision_basis || r.decision_basis;
+        if(!regime && !hardStatus) return '';
+        const regimeColor = regime==='EFFICIENT'?'#00875a':regime==='ACCEPTABLE'?'#b06000':regime==='INEFFICIENT'?'#d63b3b':'#7a88a8';
+        const regimeBg = regime==='EFFICIENT'?'#e6f4ef':regime==='ACCEPTABLE'?'#fff3e0':regime==='INEFFICIENT'?'#fdeaea':'#edf0f7';
+        const hardColor = hardStatus==='BEATING'?'#00875a':hardStatus==='ON_TARGET'?'#003d9e':hardStatus==='MISSING'?'#b06000':'#d63b3b';
+        return `<div style="margin-bottom:10px;padding:8px 12px;background:#f4f6fb;border-radius:4px;border-left:2px solid ${regimeColor};display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:8px;font-weight:700;color:#7a88a8;letter-spacing:.8px;text-transform:uppercase">PEER EFFICIENCY</span>
+            <span style="font-size:10px;font-weight:700;color:${regimeColor};background:${regimeBg};padding:2px 7px;border-radius:3px">${regime||'—'}</span>
+            ${vsPeers?`<span style="font-size:9px;color:#7a88a8">${vsPeers}</span>`:''}
+          </div>
+          <div style="width:1px;height:14px;background:#dde3f0"></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:8px;font-weight:700;color:#7a88a8;letter-spacing:.8px;text-transform:uppercase">HARD TARGET</span>
+            <span style="font-size:10px;font-weight:700;color:${hardColor}">${hardStatus||'—'}</span>
+          </div>
+          ${basis?`<div style="width:1px;height:14px;background:#dde3f0"></div><span style="font-size:9px;color:#3a4a6b;font-style:italic">${basis}</span>`:''}
+        </div>`;
+      })()}${rejectReason}<div class="rec-meta">${r.lever?`<div class="rec-meta-item"><strong>lever</strong>${r.lever}</div>`:''} ${cause?.diagnosed_cause?`<div class="rec-meta-item"><strong>cause</strong>${cause.diagnosed_cause}</div>`:''} ${kpiDelta?`<div class="rec-meta-item"><strong>expected</strong>${kpiDelta}</div>`:''} ${r.campaign?`<div class="rec-meta-item"><strong>campaign</strong>${r.campaign}</div>`:''}</div>
       ${(()=>{const w=payload?.observation_window||r.observation_window||currentObsWindow();return w?`<div style="margin-top:8px;padding:6px 10px;background:var(--blue3);border-radius:4px;display:inline-flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:700;color:var(--navy2);letter-spacing:.5px;text-transform:uppercase">&#128197; DATA WINDOW</span><span style="font-size:10px;color:var(--navy);font-weight:500">${w}</span></div>`:'';})()}
       ${actions}</div>`;
   }).join('');
@@ -550,6 +604,68 @@ async function loadPortfolio(){try{const r=await fetch(getApiUrl()+'/portfolio')
 
 function switchTab(tab){['recommendations','signals','portfolio','outcomes','memory'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==tab));document.querySelectorAll('.nav-btn').forEach((btn,i)=>{const tabs=['recommendations','signals','portfolio','outcomes','memory'];btn.classList.toggle('active',tabs[i]===tab);});}
 document.getElementById('api-url').addEventListener('change',()=>{checkHealth();loadRecommendations();loadMemory();});
+
+// Attribution config
+let pendingConfirm = null;
+function getAttrN(){ return parseInt(document.getElementById('attr-n').value)||14; }
+function getCpaTarget(){ return parseFloat(document.getElementById('cpa-target').value)||250; }
+
+function updateAttrWindowLabel(){
+  const n = getAttrN();
+  const today = new Date();
+  const end = new Date(today); end.setDate(end.getDate()-1);
+  const pStart = new Date(end); pStart.setDate(pStart.getDate()-(n+30)+1);
+  const rStart = new Date(end); rStart.setDate(rStart.getDate()-(n-1));
+  const fmt = d => d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'});
+  document.getElementById('attr-window-label').textContent =
+    `Primary: ${fmt(pStart)} – ${fmt(end)} | Recency (30% trend): ${fmt(rStart)} – ${fmt(end)}`;
+}
+
+function confirmAttrChange(sel){
+  const newN = parseInt(sel.value);
+  const prev = sel.dataset.prev || '14';
+  showConfirm(
+    'Change attribution window?',
+    `Changing attribution window from ${prev}d to ${newN}d will shift the data window used for all recommendations. This change will be logged.
+
+New primary window: last ${newN+30} fully-attributed days.
+Last ${newN} days used as 30% trend signal only.`,
+    () => { sel.dataset.prev = newN; updateAttrWindowLabel(); logChange('attribution_window', `${prev}d → ${newN}d`); },
+    () => { sel.value = prev; }
+  );
+}
+
+function confirmCpaChange(input){
+  const newVal = parseFloat(input.value);
+  const prev = input.dataset.prev || '250';
+  const delta = Math.abs((newVal - prev) / prev * 100);
+  if(delta < 10){ input.dataset.prev = newVal; return; }
+  showConfirm(
+    'Major CPA target change',
+    `Changing CPA target from ₹${prev} to ₹${newVal} is a ${delta.toFixed(0)}% shift. All budget, bid, and efficiency recommendations will recalibrate against the new target. This change will be logged.`,
+    () => { input.dataset.prev = newVal; logChange('cpa_target', `₹${prev} → ₹${newVal}`); },
+    () => { input.value = prev; }
+  );
+}
+
+function showConfirm(title, msg, onOk, onCancel){
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-dialog').style.display = 'flex';
+  pendingConfirm = { onOk, onCancel };
+}
+function applyConfirm(){ document.getElementById('confirm-dialog').style.display='none'; pendingConfirm?.onOk?.(); pendingConfirm=null; }
+function cancelConfirm(){ document.getElementById('confirm-dialog').style.display='none'; pendingConfirm?.onCancel?.(); pendingConfirm=null; }
+
+function logChange(field, change){
+  const log = JSON.parse(localStorage.getItem('paytm_re_config_log')||'[]');
+  log.unshift({ field, change, user: activeAccount?.name||'unknown', ts: new Date().toISOString() });
+  localStorage.setItem('paytm_re_config_log', JSON.stringify(log.slice(0,50)));
+  console.log(`Config change logged: ${field} ${change}`);
+}
+
+updateAttrWindowLabel();
+
 </script>
 
 <!-- SIGNATURE - DO NOT REMOVE -->
