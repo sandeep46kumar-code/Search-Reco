@@ -26,20 +26,26 @@ from copy_intelligence import detect_brand_over_index, check_incrementality
 from portfolio import compute_portfolio_impact
 from lever_scorer import score_levers
 from agents import run_analyst, run_rec_engine, run_gatekeeper
+from stability import analyze_stability, get_attribution_windows
 
 
 def run(customer_id: str = None,
         target_cpa: float = None,
         dry_run: bool = False,
-        scope: list[str] = None) -> dict:
+        scope: list[str] = None,
+        attribution_n: int = None) -> dict:
 
     start_time = time.time()
-    customer_id = customer_id or os.getenv("CUSTOMER_ID", "demo")
-    target_cpa  = target_cpa  or float(os.getenv("DEFAULT_TARGET_CPA", 250))
+    customer_id  = customer_id or os.getenv("CUSTOMER_ID", "demo")
+    target_cpa   = target_cpa  or float(os.getenv("DEFAULT_TARGET_CPA", 250))
+    attribution_n = attribution_n or int(os.getenv("ATTRIBUTION_WINDOW_DAYS", 14))
+    windows       = get_attribution_windows(attribution_n)
 
     print(f"\n{'='*60}")
     print(f"  Recommendation Engine Pipeline")
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Customer: {customer_id}")
+    print(f"  Attribution N={attribution_n}d | Primary window: {windows['primary_label']}")
+    print(f"  Recency window: {windows['recency_label']} (30% weight, trend only)")
     print(f"{'='*60}\n")
 
     # ── SETUP ────────────────────────────────────────────────────────────────
@@ -61,9 +67,26 @@ def run(customer_id: str = None,
 
     # ── NORMALISE ─────────────────────────────────────────────────────────────
     print("→ [NORM] Normalising schema...")
-    signals = normalize(campaign_df, configs)
+    signals = normalize(campaign_df, configs, attribution_n=attribution_n)
     if scope:
         signals = [s for s in signals if s["campaign_id"] in scope or s["name"] in scope]
+
+    # Run stability analysis per campaign
+    print("→ [L3b] Running stability analysis...")
+    import random as _rand; _rand.seed(42)
+    for s in signals:
+        daily_proxy = []
+        for _ in range(20):
+            noise = 1 + _rand.gauss(0, s.get("cpa_volatility", 0.1))
+            m = s.get("primary_metric_7d") or target_cpa
+            daily_proxy.append({"cost": 10000, "conversions": max(1, 10000 / (m * max(0.1, noise)))})
+        stab = analyze_stability(daily_proxy, kpi=s.get("kpi","CPA"), attribution_n=attribution_n)
+        s["stability_flag"]  = stab["stability_flag"]
+        s["weighted_metric"] = stab["weighted_cpa"]
+        s["recency_trend"]   = stab["recency_trend"]
+        s["stability_note"]  = stab["recommendation"]
+        s["data_window"]     = windows["primary_label"]
+        s["attribution_n"]   = attribution_n
 
     sufficient = [s for s in signals if s["confidence"] == "SUFFICIENT"]
     unstable   = [s for s in signals if s.get("unstable")]
@@ -119,13 +142,25 @@ def run(customer_id: str = None,
     print("→ [L7] Generating recommendations (Claude API call 1 + 2)...")
     memory = get_memory_context()
 
+    # Pass cpa_band into memory context so analyst can reference it
+    memory["cpa_band"] = intel.get("cpa_band")
+
+    # Enrich signals with dual CPA fields from intelligence pass
+    intel_map = {c["name"]: c for c in intel.get("campaign_elasticity", [])}
+    for s in signals:
+        ic = intel_map.get(s["name"], {})
+        s["efficiency_regime"]  = ic.get("efficiency_regime", "UNKNOWN")
+        s["hard_target_status"] = ic.get("hard_target_status", "UNKNOWN")
+        s["vs_peers"]           = ic.get("vs_peers")
+        s["decision_basis"]     = ic.get("decision_basis")
+
     analyst_output = run_analyst(signals, target_cpa, memory)
     print(f"   Analyst enriched {len(analyst_output)} campaigns")
 
     raw_recs = run_rec_engine(
         analyst_output, signals, diagnoses,
         lever_scores, query_summary, target_cpa,
-        memory, change_budgets
+        memory, change_budgets, intel=intel
     )
     print(f"   Engine generated {len(raw_recs)} recommendations")
 
@@ -160,15 +195,20 @@ def run(customer_id: str = None,
             v["verdict"]  = "REJECTED"
             v["reason"]   = f"Portfolio blocked: {rec.get('pre_block_reason', '')}"
 
+        camp_signal = next((s for s in signals if s["name"] == rec.get("campaign")), {})
         final_rec = {
             **rec,
-            "verdict":          v["verdict"],
-            "rejection_reason": v.get("reason"),
-            "checks_failed":    v.get("checks_failed", []),
-            "cpa_before":       next(
-                (s.get("primary_metric_7d") for s in signals if s["name"] == rec.get("campaign")),
-                None
-            ),
+            "verdict":              v["verdict"],
+            "rejection_reason":     v.get("reason"),
+            "checks_failed":        v.get("checks_failed", []),
+            "cpa_before":           camp_signal.get("primary_metric_7d") or camp_signal.get("primary_metric_14d"),
+            "cpa_target_used":      camp_signal.get("target_value", target_cpa),
+            "attribution_window":   f"N={attribution_n} days",
+            "data_window_used":     windows["primary_label"],
+            "recency_window":       windows["recency_label"],
+            "stability_flag":       camp_signal.get("stability_flag", "UNKNOWN"),
+            "recency_trend":        camp_signal.get("recency_trend", "UNKNOWN"),
+            "observation_window":   windows["full_label"],
         }
         final_recs.append(final_rec)
 
