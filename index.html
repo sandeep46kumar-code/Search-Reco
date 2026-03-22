@@ -1,38 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Search RE · Paytm Performance Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paytm-blue: #002970;
+  --paytm-sky: #00baf2;
+  --bg-light: #f5f7fa;
+  --white: #ffffff;
+  --text-main: #1d252d;
+  --text-sub: #505d6b;
+  --border-color: #ebeef2;
+  --green: #21c17a;
+  --red: #ff585d;
+  --font-main: 'Inter', sans-serif;
+  --font-mono: 'Roboto Mono', monospace;
+}
+
+body{background:var(--bg-light);color:var(--text-main);font-family:var(--font-main);font-size:13px;min-height:100vh;line-height:1.6}
+
+/* LOCK SCREEN */
+#lock{position:fixed;inset:0;background:var(--paytm-blue);display:flex;align-items:center;justify-content:center;z-index:1000;transition:opacity .6s}
+#lock.out{opacity:0;pointer-events:none}
+.lock-box{width:360px;background:var(--white);padding:40px;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,0.2);text-align:center}
+.lock-logo-svg{width:120px;margin-bottom:24px;fill: var(--paytm-blue)}
+.lock-title{font-size:22px;font-weight:700;color:var(--paytm-blue);margin-bottom:8px}
+.lock-input{width:100%;background:var(--bg-light);border:1px solid var(--border-color);padding:14px;border-radius:8px;font-family:var(--font-mono);font-size:14px;outline:none;text-align:center;margin-bottom:20px;letter-spacing:4px}
+.lock-btn{width:100%;background:var(--paytm-sky);border:none;padding:14px;border-radius:8px;font-weight:600;color:#fff;cursor:pointer;text-transform:uppercase}
+
+/* APP HEADER */
+.header{background:var(--white);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.05)}
+.header-brand{display:flex;align-items:center;gap:16px}
+.paytm-logo-header{height:24px;fill: var(--paytm-blue)}
+.header-name{font-size:15px;font-weight:600;color:var(--paytm-blue);border-left:1px solid var(--border-color);padding-left:16px}
+
+/* NAVIGATION */
+.nav{background:var(--white);padding:0 32px;display:flex;border-bottom:1px solid var(--border-color)}
+.nav-btn{padding:18px 20px;font-size:12px;font-weight:600;color:var(--text-sub);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px}
+.nav-btn.active{color:var(--paytm-sky);border-bottom-color:var(--paytm-sky)}
+
+/* CONTENT */
+.content{padding:32px;max-width:1200px;margin:0 auto}
+
+.run-section{display:flex;align-items:center;gap:12px;margin-bottom:28px;background:var(--white);padding:16px;border-radius:12px;border:1px solid var(--border-color)}
+.run-btn{background:var(--paytm-blue);border:none;padding:10px 20px;border-radius:6px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px}
+.download-btn{background:var(--white);border:1px solid var(--paytm-sky);padding:10px 20px;border-radius:6px;font-weight:600;color:var(--paytm-sky);cursor:pointer;display:flex;align-items:center;gap:8px;transition: all 0.2s}
+.download-btn:hover{background: var(--paytm-sky); color: #fff}
+
+.rec-card{background:var(--white);border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:12px;display:flex;gap:20px}
+.rec-icon-wrap{width:48px;height:48px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.icon-increase{background: #e8f7f0; color: var(--green)}
+.icon-decrease{background: #fef1f1; color: var(--red)}
+.icon-neutral{background: #f0f3f6; color: var(--text-sub)}
+
+.footer-credit{position:fixed;bottom:20px;right:32px;font-size:11px;font-weight:600;color:var(--text-sub);background:rgba(255,255,255,0.9);padding:8px 16px;border-radius:30px;border:1px solid var(--border-color)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
 <div id="lock">
   <div class="lock-box">
-    <img src="https://asset.brandfetch.io/id9p-S_8S3/id7m8Y-6mE.png" 
-         class="lock-logo-img" 
-         alt="Paytm" 
-         style="width: 100px; height: auto;"
-         onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Paytm_Logo.p_svg/1200px-Paytm_Logo.p_svg.png';">
-    
+    <svg class="lock-logo-svg" viewBox="0 0 512 165" xmlns="http://www.w3.org/2000/svg"><path d="M125.7 33.3c-20.5 0-37.1 16.6-37.1 37.1s16.6 37.1 37.1 37.1 37.1-16.6 37.1-37.1-16.6-37.1-37.1-37.1zm0 57.5c-11.3 0-20.4-9.1-20.4-20.4s9.1-20.4 20.4-20.4 20.4 9.1 20.4 20.4-9.1 20.4-20.4 20.4z" fill="#00baf2"/><path d="M54.1 34.6h-31v71.5h14.5V81.4h16.5c15.2 0 27.6-12.4 27.6-27.6s-12.4-19.2-27.6-19.2zm0 32.3H37.6V49.1h16.5c6.4 0 11.6 5.2 11.6 11.6.1 6.4-5.1 6.2-11.6 6.2zM216.7 34.6l-14.8 38.6-14.8-38.6h-15.6l22.4 54.3v17.2h16V88.9l22.4-54.3h-15.6zM266.6 49.1h-17.5v41.2c0 3.7 3 6.7 6.7 6.7h10.8v13.6h-12.6c-10.2 0-18.4-8.2-18.4-18.4V49.1h-9.8V34.6h9.8v-14h14.5v14h17.5v14.5zM389.2 34.6v12.2c-5.4-8.8-15.1-14.7-26.2-14.7-17.6 0-31.9 14.3-31.9 31.9s14.3 31.9 31.9 31.9c11.1 0 20.8-5.9 26.2-14.7v13.3h14.5V34.6h-14.5zm-25.2 46.8c-9.6 0-17.4-7.8-17.4-17.4s7.8-17.4 17.4-17.4 17.4 7.8 17.4 17.4-7.8 17.4-17.4 17.4z" fill="#002970"/></svg>
     <div class="lock-title">Search RE Dashboard</div>
-    <div class="lock-sub">Internal Performance Intelligence Engine</div>
     <input type="password" class="lock-input" id="lock-pw" placeholder="••••" autocomplete="off"/>
-    <button class="lock-btn" onclick="tryUnlock()">Access Dashboard</button>
-    <div class="lock-err" id="lock-err">Invalid Passcode</div>
+    <button class="lock-btn" onclick="tryUnlock()">Login</button>
   </div>
 </div>
 
-<div id="app">
+<div id="app" class="hidden">
   <div class="header">
     <div class="header-brand">
-      <img src="https://asset.brandfetch.io/id9p-S_8S3/id7m8Y-6mE.png" 
-           class="paytm-logo" 
-           alt="Paytm"
-           onerror="this.style.display='none'; document.getElementById('logo-text').style.display='block';">
-      <span id="logo-text" style="display:none; font-weight:800; color:#00baf2; font-size:20px;">Paytm</span>
-      
-      <div class="header-name">Search Recommendation Engine</div>
+       <svg class="paytm-logo-header" viewBox="0 0 512 165" xmlns="http://www.w3.org/2000/svg"><path d="M125.7 33.3c-20.5 0-37.1 16.6-37.1 37.1s16.6 37.1 37.1 37.1 37.1-16.6 37.1-37.1-16.6-37.1-37.1-37.1zm0 57.5c-11.3 0-20.4-9.1-20.4-20.4s9.1-20.4 20.4-20.4 20.4 9.1 20.4 20.4-9.1 20.4-20.4 20.4z" fill="#00baf2"/><path d="M54.1 34.6h-31v71.5h14.5V81.4h16.5c15.2 0 27.6-12.4 27.6-27.6s-12.4-19.2-27.6-19.2zm0 32.3H37.6V49.1h16.5c6.4 0 11.6 5.2 11.6 11.6.1 6.4-5.1 6.2-11.6 6.2zM216.7 34.6l-14.8 38.6-14.8-38.6h-15.6l22.4 54.3v17.2h16V88.9l22.4-54.3h-15.6zM266.6 49.1h-17.5v41.2c0 3.7 3 6.7 6.7 6.7h10.8v13.6h-12.6c-10.2 0-18.4-8.2-18.4-18.4V49.1h-9.8V34.6h9.8v-14h14.5v14h17.5v14.5zM389.2 34.6v12.2c-5.4-8.8-15.1-14.7-26.2-14.7-17.6 0-31.9 14.3-31.9 31.9s14.3 31.9 31.9 31.9c11.1 0 20.8-5.9 26.2-14.7v13.3h14.5V34.6h-14.5zm-25.2 46.8c-9.6 0-17.4-7.8-17.4-17.4s7.8-17.4 17.4-17.4 17.4 7.8 17.4 17.4-7.8 17.4-17.4 17.4z" fill="#002970"/></svg>
+       <div class="header-name">Search RE</div>
     </div>
-    ```
+    <div class="header-right">
+      <div class="header-status"><div class="status-dot live"></div><span>System Live</span></div>
+    </div>
+  </div>
 
-### Why it might not have been loading:
-1.  **CORS/Hotlinking Restrictions:** Some sites block other domains from displaying their images directly.
-2.  **Broken Path:** The specific SVG path used previously can sometimes be unstable depending on the user's network or firewall.
-3.  **Ad-Blockers:** Occasionally, aggressive ad-blockers flag "brandfetch" or "wikimedia" URLs if they think they are tracking pixels.
+  <div class="nav">
+    <button class="nav-btn active" onclick="switchTab('recommendations')"><i data-lucide="zap"></i> Recommendations</button>
+  </div>
 
-### One more tip for Sandeep:
-If you are running this on an internal Paytm network, ensure you use the **internal asset URL** provided by your design team. 
+  <div class="content">
+    <div class="run-section">
+        <button class="run-btn"><i data-lucide="play"></i> Run Engine</button>
+        <button class="download-btn" onclick="exportToExcel()"><i data-lucide="download"></i> Download Report</button>
+    </div>
 
-**Next Step:** Would you like me to help you embed the logo as a **Base64 string**? This would bake the image directly into the code so it works offline and never fails to load.
+    <div id="tab-recommendations">
+        <div class="rec-list" id="rec-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-credit">Created by Sandeep46.kumar@paytm.com</div>
+
+<script>
+let currentRecs = [
+    {Campaign: 'Brand_Search_India', Action: 'Increase Bid by 10%', Reason: 'High CTR (12%) & low CPA', Type: 'INCREASE'},
+    {Campaign: 'Competitor_Conquest', Action: 'Decrease Budget by 20%', Reason: 'CPA exceeding target by 40%', Type: 'DECREASE'},
+    {Campaign: 'Generic_Shopping', Action: 'No Change', Reason: 'Performance stable', Type: 'NEUTRAL'}
+];
+
+function getIconForType(type) {
+    if (type === 'INCREASE') return { icon: 'trending-up', class: 'icon-increase' };
+    if (type === 'DECREASE') return { icon: 'trending-down', class: 'icon-decrease' };
+    return { icon: 'minus', class: 'icon-neutral' };
+}
+
+function renderRecs() {
+    const list = document.getElementById('rec-list');
+    list.innerHTML = currentRecs.map(r => {
+        const style = getIconForType(r.Type);
+        return `
+        <div class="rec-card">
+            <div class="rec-icon-wrap ${style.class}"><i data-lucide="${style.icon}"></i></div>
+            <div style="flex:1">
+                <div style="font-size: 11px; text-transform: uppercase; color: var(--paytm-sky); font-weight: 700;">${r.Campaign}</div>
+                <div style="font-weight:700; color:var(--paytm-blue); font-size: 15px;">${r.Action}</div>
+                <div style="font-size:12px; color:var(--text-sub)">${r.Reason}</div>
+            </div>
+        </div>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+function exportToExcel() {
+    // 1. Prepare Data
+    const dataForExport = currentRecs.map(r => ({
+        "Campaign Name": r.Campaign,
+        "Recommended Action": r.Action,
+        "Logic/Reasoning": r.Reason,
+        "Signal Type": r.Type
+    }));
+
+    // 2. Create Workbook
+    const worksheet = XLSX.utils.json_to_sheet(dataForExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Recommendations");
+
+    // 3. Branded Filename with Date
+    const date = new Date().toISOString().split('T')[0];
+    const fileName = `Paytm_SearchRE_Report_${date}.xlsx`;
+
+    // 4. Trigger Download
+    XLSX.writeFile(workbook, fileName);
+}
+
+const PASSWORD = 'paytm@RE2026';
+function tryUnlock() {
+    if (document.getElementById('lock-pw').value === PASSWORD) {
+        document.getElementById('lock').classList.add('out');
+        document.getElementById('app').classList.remove('hidden');
+        setTimeout(() => { renderRecs(); }, 400);
+    }
+}
+
+// Initial Call
+lucide.createIcons();
+</script>
+</body>
+</html>
