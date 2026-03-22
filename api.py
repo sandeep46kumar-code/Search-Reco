@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins="*", supports_credentials=False)  # Allow frontend to call from any origin
+CORS(app)  # Allow frontend to call from any origin
 
 
 # ── STARTUP ───────────────────────────────────────────────────────────────────
@@ -74,40 +74,68 @@ def health():
 
 # ── ENDPOINT 2: RUN PIPELINE ──────────────────────────────────────────────────
 
+# ── ASYNC PIPELINE STATE ─────────────────────────────────────────────────────
+import threading
+_run_state = {"status": "idle", "started_at": None, "result": None, "error": None}
+_run_lock = threading.Lock()
+
+def _run_bg(customer_id, target_cpa, dry_run, scope):
+    global _run_state
+    try:
+        from pipeline import run
+        results = run(customer_id=customer_id, target_cpa=target_cpa,
+                      dry_run=dry_run, scope=scope)
+        with _run_lock:
+            _run_state["status"] = "done"
+            _run_state["result"] = {
+                "approved":  len(results["approved"]),
+                "rejected":  len(results["rejected"]),
+                "do_nothing":len(results["do_nothing"]),
+                "recommendations": json.loads(
+                    json.dumps(results["approved"], default=_serialize)),
+                "stats":    results["stats"],
+                "duration": results["duration"],
+            }
+    except Exception as e:
+        traceback.print_exc()
+        with _run_lock:
+            _run_state["status"] = "error"
+            _run_state["error"] = str(e)
+
+
 @app.route("/run", methods=["GET", "POST"])
 def run_pipeline():
-    """Trigger full pipeline. Body: { customer_id, target_cpa, dry_run, scope }
-    GET request always runs as dry_run=True for browser testing."""
-    body        = request.get_json(silent=True) or {}
-    # GET from browser = always dry run
+    """Fire pipeline in background, return immediately. Poll /run/status for results."""
+    global _run_state
+    body = request.get_json(silent=True) or {}
     if request.method == "GET":
         body["dry_run"] = True
     customer_id = body.get("customer_id") or os.getenv("CUSTOMER_ID", "demo")
     target_cpa  = float(body.get("target_cpa") or os.getenv("DEFAULT_TARGET_CPA", 250))
     dry_run     = bool(body.get("dry_run", False))
-    scope       = body.get("scope")  # list of campaign IDs or None
+    scope       = body.get("scope")
+    with _run_lock:
+        if _run_state["status"] == "running":
+            return ok({"status": "already_running"})
+        _run_state = {"status": "running", "started_at": datetime.now().isoformat(),
+                      "result": None, "error": None}
+    threading.Thread(target=_run_bg, args=(customer_id, target_cpa, dry_run, scope),
+                     daemon=True).start()
+    return ok({"status": "started", "message": "Pipeline running. Poll /run/status for results."})
 
-    try:
-        from pipeline import run
-        results = run(
-            customer_id=customer_id,
-            target_cpa=target_cpa,
-            dry_run=dry_run,
-            scope=scope
-        )
-        return ok({
-            "approved":      len(results["approved"]),
-            "rejected":      len(results["rejected"]),
-            "do_nothing":    len(results["do_nothing"]),
-            "recommendations": json.loads(
-                json.dumps(results["approved"], default=_serialize)
-            ),
-            "stats":         results["stats"],
-            "duration":      results["duration"],
-        })
-    except Exception as e:
-        traceback.print_exc()
-        return err(str(e), 500)
+
+@app.route("/run/status", methods=["GET"])
+def run_status():
+    """Poll for pipeline results."""
+    with _run_lock:
+        s = dict(_run_state)
+    if s["status"] == "done" and s["result"]:
+        return ok({"status": "done", **s["result"]})
+    if s["status"] == "error":
+        return ok({"status": "error", "message": s["error"]})
+    if s["status"] == "running":
+        return ok({"status": "running", "started_at": s["started_at"]})
+    return ok({"status": "idle"})
 
 
 # ── ENDPOINT 3: GET RECOMMENDATIONS ──────────────────────────────────────────
@@ -379,7 +407,7 @@ def seed_configs():
         },
         {
             "campaign_id": "Search_Loans_Generic",
-            "product": "loans", "kpi": "CPA", "target_value": 350,
+            "product": "loans", "kpi": "CPA", "target_value": 250,
             "active": True, "scope": "include", "max_actions_per_day": 2,
             "lever_weights": {"budget_reallocation": 8, "search_term_mining": 9,
                               "ad_copy": 7},
