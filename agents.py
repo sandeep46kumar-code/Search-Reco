@@ -67,8 +67,15 @@ def run_analyst(signals: list[dict], target_cpa: float, memory: dict) -> list[di
     if not sufficient:
         return []
 
+    band = memory.get("cpa_band")
+    band_str = band["description"] if band else "insufficient data for band"
     user = f"""Observation window: {_date_window()}
-Target CPA: Rs {target_cpa}
+Account CPA distribution band: {band_str}
+Hard target CPA: Rs {target_cpa}
+
+NOTE: Every insight must state whether the recommendation basis is:
+  (A) Fixed hard target (Rs {target_cpa}) OR
+  (B) Relative efficiency vs peer distribution (the band above)
 
 Campaign signals ({len(sufficient)} sufficient):
 {json.dumps([{
@@ -83,6 +90,10 @@ Campaign signals ({len(sufficient)} sufficient):
     "ctr": s["ctr"],
     "cvr": s["cvr"],
     "cpa_volatility": s["cpa_volatility"],
+        "efficiency_regime":  s.get("efficiency_regime", "UNKNOWN"),
+        "hard_target_status": s.get("hard_target_status", "UNKNOWN"),
+        "vs_peers":           s.get("vs_peers"),
+        "decision_basis":     s.get("decision_basis"),
 } for s in sufficient], indent=2)}
 
 Historical accuracy (lever -> accuracy score):
@@ -147,6 +158,12 @@ Output: JSON array only. Each object:
   "why": "data-backed reasoning with specific numbers",
   "kpi_delta_estimate": "expected change e.g. CPA -8% or CVR +12%",
   "observation_window": "e.g. 15 Mar – 21 Mar 2026 (7d) vs 08 Mar – 21 Mar 2026 (14d baseline)",
+  "attribution_window_used": "e.g. N=14 days — data from 06 Feb to 08 Mar 2026",
+  "data_window_used": "exact date range used for this recommendation",
+  "cpa_target_used": 250,
+  "stability_flag": "STABLE | MODERATE | VOLATILE | LOW_DATA",
+  "recency_trend": "IMPROVING | WORSENING | CONSISTENT | SLIGHT_SHIFT",
+  "risk_if_ignored": "specific consequence of not acting, quantified where possible"
   "est_conv_delta": 0,
   "lever": "lever name",
   "priority_rank": 1,
@@ -176,10 +193,12 @@ def run_rec_engine(analyst_output: list[dict],
                    query_summary: dict,
                    target_cpa: float,
                    memory: dict,
-                   change_budgets: dict) -> list[dict]:
+                   change_budgets: dict,
+                   intel: dict = None) -> list[dict]:
     """Agent 2: Generate recommendations from all upstream signals."""
 
     # Build compact signal context
+    _attr_n = attribution_n  # alias for f-string
     signal_context = {s["name"]: {
         "classification": s["classification"],
         "cpa_7d": s.get("primary_metric_7d"),
@@ -189,7 +208,11 @@ def run_rec_engine(analyst_output: list[dict],
         "change_budget": change_budgets.get(s["name"], {}).get("remaining", 2),
     } for s in signals}
 
-    user = f"""Observation window: {_date_window()}
+    user = f"""=== ATTRIBUTION & STABILITY CONFIG ===
+Observation window: {_date_window()}
+Attribution window (N): {attribution_n} days — EXCLUDE last {attribution_n} days from primary analysis
+Primary data window: {_date_window().split("|")[0].strip()}
+Recency signal: Last {attribution_n} days at 30% weight — use for TREND DIRECTION ONLY, never absolute CPA
 Target CPA: Rs {target_cpa}
 
 Analyst insights:
@@ -208,6 +231,9 @@ Cause diagnoses:
 Top lever scores per campaign:
 {json.dumps({k: list(v.items())[:3] for k, v in lever_scores.items()}, indent=2)}
 
+Account CPA Band:
+{json.dumps(intel.get("cpa_band") if intel else {}, indent=2) if False else json.dumps({"band": next((c.get("vs_peers") for c in intel.get("campaign_elasticity",[]) if c.get("vs_peers")), "N/A") if intel else "N/A"})}
+
 Query-level summary:
 {json.dumps({
     "zero_conv_cost_pct": query_summary.get("zero_conv_pct"),
@@ -224,6 +250,11 @@ Recent outcomes from memory:
 
 Campaigns to NOT repeat same rec type (human rejected before):
 {json.dumps(memory.get("repeat_rejects", []), indent=2)}
+
+For EACH recommendation state the decision_basis field as either:
+  - "DYNAMIC_BAND: [regime] vs peers" — when using distribution
+  - "HARD_TARGET: [ratio]x target" — when using fixed target
+  - Both when available
 
 Generate 4-8 recommendations. Prioritise: (1) query control, (2) budget reallocation, (3) bids, (4) creative.
 Include at least one DO_NOTHING if any campaigns have weak/unstable signals."""
