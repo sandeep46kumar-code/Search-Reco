@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Search RE · Paytm Performance Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0c0c10;--ink2:#2a2a35;--ink3:#6b6b80;--ink4:#a0a0b8;
+  --paper:#f5f4ef;--paper2:#eeede6;--paper3:#e5e3d9;
+  --accent:#c84b2f;--accent2:#e8673f;
+  --green:#1a6b4a;--green-l:#d4f0e4;
+  --red:#b02020;--red-l:#fde8e8;
+  --amber:#8a5a00;--amber-l:#fef3d0;
+  --blue:#1a3a6b;--blue-l:#dde8f8;
+  --mono:'DM Mono',monospace;--serif:'Fraunces',serif;
+}
+body{background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:13px;min-height:100vh;line-height:1.6}
+
+/* LOCK */
+#lock{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:1000;transition:opacity .6s,transform .6s}
+#lock.out{opacity:0;transform:scale(1.04);pointer-events:none}
+.lock-box{width:320px;text-align:center}
+.lock-logo{font-family:var(--serif);font-size:11px;color:#666;letter-spacing:3px;text-transform:uppercase;margin-bottom:48px}
+.lock-title{font-family:var(--serif);font-size:36px;font-weight:300;color:#f5f4ef;line-height:1.15;margin-bottom:8px}
+.lock-sub{font-size:11px;color:#555;letter-spacing:1px;margin-bottom:40px}
+.lock-input{width:100%;background:transparent;border:none;border-bottom:1px solid #333;padding:12px 0;font-family:var(--mono);font-size:14px;color:#f5f4ef;outline:none;text-align:center;letter-spacing:4px;transition:border-color .2s;margin-bottom:24px}
+.lock-input::placeholder{color:#444;letter-spacing:2px}
+.lock-input:focus{border-bottom-color:#c84b2f}
+.lock-btn{width:100%;background:var(--accent);border:none;padding:13px;font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#fff;cursor:pointer;transition:background .2s}
+.lock-btn:hover{background:var(--accent2)}
+.lock-err{margin-top:16px;font-size:11px;color:#c84b2f;opacity:0;transition:opacity .3s}
+.lock-err.show{opacity:1}
+
+/* APP */
+#app{opacity:0;transition:opacity .5s}
+#app.in{opacity:1}
+
+/* HEADER */
+.header{background:var(--ink);padding:0 32px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-brand{display:flex;align-items:center;gap:16px}
+.header-mark{width:28px;height:28px;background:var(--accent);display:grid;place-items:center;font-family:var(--serif);font-style:italic;font-size:14px;color:#fff}
+.header-name{font-family:var(--serif);font-size:14px;font-weight:300;color:#f5f4ef;letter-spacing:.5px}
+.header-right{display:flex;align-items:center;gap:20px}
+.api-url-input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:5px 12px;font-family:var(--mono);font-size:10px;color:#aaa;width:300px;outline:none;transition:border-color .2s,color .2s}
+.api-url-input:focus{border-color:var(--accent);color:#f5f4ef}
+.header-status{display:flex;align-items:center;gap:6px;font-size:10px;color:#555;letter-spacing:.5px}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#333;transition:background .3s}
+.status-dot.live{background:#2ecc71;box-shadow:0 0 6px rgba(46,204,113,.5)}
+.status-dot.error{background:var(--accent)}
+
+/* NAV */
+.nav{border-bottom:1px solid var(--paper3);padding:0 32px;display:flex;background:var(--paper)}
+.nav-btn{padding:14px 20px;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink4);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.nav-btn:hover{color:var(--ink2)}
+.nav-btn.active{color:var(--ink);border-bottom-color:var(--accent)}
+
+/* LAYOUT */
+.content{padding:32px;max-width:1200px}
+
+/* STATS */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.stat-card{background:var(--paper2);border:1px solid var(--paper3);padding:18px 20px}
+.stat-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ink4);margin-bottom:8px}
+.stat-value{font-family:var(--serif);font-size:28px;font-weight:600;color:var(--ink);line-height:1}
+.stat-value.green{color:var(--green)}
+.stat-value.red{color:var(--red)}
+.stat-value.amber{color:var(--amber)}
+.stat-sub{font-size:9px;color:var(--ink4);margin-top:4px}
+
+/* RUN */
+.run-section{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+.run-btn{background:var(--ink);border:none;padding:12px 28px;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#f5f4ef;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .2s}
+.run-btn:hover{background:var(--ink2)}
+.run-btn:disabled{background:#ccc;cursor:not-allowed}
+.run-btn-dry{background:transparent;border:1px solid var(--ink3);padding:12px 24px;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);cursor:pointer;transition:all .2s}
+.run-btn-dry:hover{border-color:var(--ink);color:var(--ink)}
+.run-status{font-size:10px;color:var(--ink4)}
+
+/* PROGRESS BAR */
+.progress-wrap{width:200px;height:2px;background:var(--paper3)}
+.progress-bar{height:100%;background:var(--accent);width:0%;transition:width .3s}
+@keyframes progress-indeterminate{0%{left:-40%;width:40%}100%{left:100%;width:40%}}
+.progress-bar.running{position:relative;animation:progress-indeterminate 1.5s ease infinite;width:40%!important}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:12px;height:12px;border:1.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+
+/* LOG */
+.log-panel{background:var(--ink);padding:16px 20px;max-height:220px;overflow-y:auto;margin-bottom:20px;display:none}
+.log-panel.show{display:block}
+.log-line{display:flex;gap:12px;font-size:10px;line-height:1.8}
+.log-ts{color:#444;flex-shrink:0}
+.log-msg{color:#aaa}
+.log-msg.ok{color:#2ecc71}
+.log-msg.warn{color:#f39c12}
+.log-msg.err{color:#e74c3c}
+.log-msg.accent{color:#e67e22}
+
+/* FILTER */
+.filter-row{display:flex;gap:4px;margin-bottom:16px}
+.filter-btn{padding:6px 14px;font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid var(--paper3);background:transparent;color:var(--ink4);cursor:pointer;transition:all .15s}
+.filter-btn:hover{border-color:var(--ink3);color:var(--ink3)}
+.filter-btn.active{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+
+/* SECTION */
+.section-head{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+.section-title{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--ink)}
+.section-count{font-size:10px;color:var(--ink4);letter-spacing:1px}
+
+/* REC CARDS */
+.rec-list{display:flex;flex-direction:column;gap:1px;margin-bottom:32px}
+.rec-card{background:var(--paper2);border-left:3px solid transparent;padding:20px 24px;transition:background .15s}
+.rec-card:hover{background:var(--paper3)}
+.rec-card.approved{border-left-color:var(--green)}
+.rec-card.rejected{border-left-color:var(--red)}
+.rec-card.do-nothing{border-left-color:var(--ink4)}
+.rec-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
+.rec-action{font-size:13px;color:var(--ink);line-height:1.5;flex:1}
+.rec-badges{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.badge{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px}
+.badge-type{background:var(--blue-l);color:var(--blue)}
+.badge-conf-high{background:var(--green-l);color:var(--green)}
+.badge-conf-medium{background:var(--amber-l);color:var(--amber)}
+.badge-conf-low{background:var(--paper3);color:var(--ink4)}
+.badge-approved{background:var(--green-l);color:var(--green)}
+.badge-rejected{background:var(--red-l);color:var(--red)}
+.badge-nothing{background:var(--paper3);color:var(--ink4)}
+.rec-why{font-size:11px;color:var(--ink3);background:var(--paper);border:1px solid var(--paper3);padding:10px 14px;line-height:1.7;margin-bottom:10px}
+.rec-meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.rec-meta-item{font-size:9px;letter-spacing:.5px;color:var(--ink4);display:flex;align-items:center;gap:5px}
+.rec-meta-item strong{color:var(--ink3)}
+.rec-actions{display:flex;gap:8px;margin-top:12px}
+.act-btn{padding:6px 14px;font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border:1px solid;cursor:pointer;transition:all .15s;background:transparent}
+.act-implement{border-color:var(--ink);color:var(--ink)}
+.act-implement:hover{background:var(--ink);color:#fff}
+.act-reject{border-color:var(--ink4);color:var(--ink4)}
+.act-reject:hover{border-color:var(--red);color:var(--red)}
+.act-done{border-color:var(--green);color:var(--green);background:var(--green-l);cursor:default}
+
+/* SIGNAL */
+.signal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:32px}
+.signal-card{background:var(--paper2);border:1px solid var(--paper3);padding:14px 16px}
+.signal-name{font-size:10px;font-weight:500;color:var(--ink);margin-bottom:8px;line-height:1.4}
+.signal-class{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;margin-bottom:10px;display:inline-block}
+.cls-scalable{background:var(--green-l);color:var(--green)}
+.cls-saturation{background:var(--amber-l);color:var(--amber)}
+.cls-diminishing{background:var(--red-l);color:var(--red)}
+.cls-low{background:var(--paper3);color:var(--ink4)}
+.signal-metrics{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.sig-metric{display:flex;flex-direction:column;gap:1px}
+.sig-metric-l{font-size:8px;color:var(--ink4);letter-spacing:.5px}
+.sig-metric-v{font-size:11px;color:var(--ink2);font-weight:500}
+
+/* MEMORY */
+.memory-panel{background:var(--paper2);border:1px solid var(--paper3);padding:20px 24px;margin-bottom:20px}
+.memory-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink4);margin-bottom:16px}
+.memory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.mem-item{display:flex;flex-direction:column;gap:3px}
+.mem-lever{font-size:9px;color:var(--ink4);letter-spacing:.5px}
+.mem-bar-wrap{height:3px;background:var(--paper3);margin:3px 0}
+.mem-bar{height:100%;background:var(--accent);transition:width .5s}
+.mem-score{font-size:11px;font-weight:500;color:var(--ink2)}
+
+/* OUTCOMES */
+.outcome-card{background:var(--paper2);border:1px solid var(--paper3);padding:16px 20px;margin-bottom:8px;display:flex;align-items:center;gap:20px}
+.outcome-icon{width:36px;height:36px;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.outcome-icon.pos{background:var(--green-l);color:var(--green)}
+.outcome-icon.neg{background:var(--red-l);color:var(--red)}
+.outcome-icon.neu{background:var(--paper3);color:var(--ink4)}
+.outcome-info{flex:1}
+.outcome-action{font-size:11px;color:var(--ink);margin-bottom:3px}
+.outcome-meta{font-size:9px;color:var(--ink4)}
+.outcome-delta{font-family:var(--serif);font-size:18px;font-weight:600;text-align:right}
+.outcome-delta.pos{color:var(--green)}
+.outcome-delta.neg{color:var(--red)}
+
+/* PORTFOLIO */
+.portfolio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:28px}
+.portfolio-card{background:var(--paper2);border:1px solid var(--paper3);padding:16px 18px}
+.portfolio-cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ink4);margin-bottom:8px}
+.portfolio-spend{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.portfolio-cap-bar{height:2px;background:var(--paper3);margin:8px 0 4px}
+.portfolio-cap-fill{height:100%;background:var(--accent);transition:width .5s}
+.portfolio-cap-label{font-size:9px;color:var(--ink4)}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--ink4)}
+.empty-big{font-family:var(--serif);font-size:48px;font-weight:300;font-style:italic;color:var(--paper3);margin-bottom:12px}
+
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--paper3)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <div class="lock-box">
+    <div class="lock-logo">Paytm · Performance Intelligence</div>
+    <div class="lock-title">Search RE<br>Dashboard</div>
+    <div class="lock-sub">Recommendation Engine v3.0</div>
+    <input type="password" class="lock-input" id="lock-pw" placeholder="enter password" autocomplete="off"/>
+    <button class="lock-btn" onclick="tryUnlock()">Access Dashboard</button>
+    <div class="lock-err" id="lock-err">Incorrect password</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div class="header-brand">
+      <div class="header-mark"><em>RE</em></div>
+      <div class="header-name">Search Recommendation Engine</div>
+    </div>
+    <div class="header-right">
+      <input type="text" class="api-url-input" id="api-url"
+        placeholder="https://api-production-c43f.up.railway.app"
+        value="https://api-production-c43f.up.railway.app"/>
+      <div class="header-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">checking...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="switchTab('recommendations')">Recommendations</button>
+    <button class="nav-btn" onclick="switchTab('signals')">Campaign Signals</button>
+    <button class="nav-btn" onclick="switchTab('portfolio')">Portfolio</button>
+    <button class="nav-btn" onclick="switchTab('outcomes')">Outcomes</button>
+    <button class="nav-btn" onclick="switchTab('memory')">Memory</button>
+  </div>
+
+  <div class="content">
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-label">Approved today</div><div class="stat-value green" id="stat-approved">—</div><div class="stat-sub">recommendations</div></div>
+      <div class="stat-card"><div class="stat-label">Rejected</div><div class="stat-value red" id="stat-rejected">—</div><div class="stat-sub">by gatekeeper</div></div>
+      <div class="stat-card"><div class="stat-label">DO_NOTHING</div><div class="stat-value" id="stat-nothing">—</div><div class="stat-sub">weak signal</div></div>
+      <div class="stat-card"><div class="stat-label">Last run</div><div class="stat-value amber" id="stat-duration">—</div><div class="stat-sub">seconds</div></div>
+    </div>
+
+    <div class="run-section">
+      <button class="run-btn" id="run-btn" onclick="runPipeline(false)">
+        <span id="run-icon">▶</span><span id="run-label">Run Pipeline</span>
+      </button>
+      <button class="run-btn-dry" id="dry-btn" onclick="runPipeline(true)">Dry Run</button>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div class="run-status" id="run-status"></div>
+        <div class="progress-wrap" id="progress-wrap" style="display:none">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="log-panel" id="log-panel"></div>
+
+    <!-- TABS -->
+    <div id="tab-recommendations">
+      <div class="filter-row">
+        <button class="filter-btn active" onclick="filterRecs('all',this)">All</button>
+        <button class="filter-btn" onclick="filterRecs('approved',this)">Approved</button>
+        <button class="filter-btn" onclick="filterRecs('rejected',this)">Rejected</button>
+        <button class="filter-btn" onclick="filterRecs('DO_NOTHING',this)">Do Nothing</button>
+      </div>
+      <div class="section-head">
+        <div class="section-title">Recommendations</div>
+        <div class="section-count" id="rec-count"></div>
+      </div>
+      <div class="rec-list" id="rec-list">
+        <div class="empty"><div class="empty-big">∅</div><div>Run the pipeline to generate recommendations</div></div>
+      </div>
+    </div>
+
+    <div id="tab-signals" class="hidden">
+      <div class="section-head"><div class="section-title">Campaign Signals</div><div class="section-count" id="signal-count"></div></div>
+      <div class="signal-grid" id="signal-grid"><div class="empty"><div class="empty-big">∅</div><div>Run the pipeline to see signals</div></div></div>
+    </div>
+
+    <div id="tab-portfolio" class="hidden">
+      <div class="section-head"><div class="section-title">Portfolio</div></div>
+      <div class="portfolio-grid" id="portfolio-grid"><div class="empty" style="grid-column:1/-1"><div class="empty-big">∅</div><div>No portfolio data yet</div></div></div>
+    </div>
+
+    <div id="tab-outcomes" class="hidden">
+      <div class="section-head"><div class="section-title">7-day Outcomes</div></div>
+      <div id="outcomes-list"><div class="empty"><div class="empty-big">∅</div><div>No implemented recommendations yet</div></div></div>
+    </div>
+
+    <div id="tab-memory" class="hidden">
+      <div class="section-head"><div class="section-title">Memory & Accuracy</div></div>
+      <div class="memory-panel">
+        <div class="memory-title">Lever accuracy scores (30-day)</div>
+        <div class="memory-grid" id="memory-grid"><div style="font-size:10px;color:var(--ink4)">No accuracy data yet — system learns after 7-day outcomes are recorded.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PASSWORD = 'paytm@RE2026';
+let allRecs = [];
+let currentFilter = 'all';
+let pollTimer = null;
+
+document.getElementById('lock-pw').addEventListener('keydown', e => { if(e.key==='Enter') tryUnlock(); });
+
+function tryUnlock() {
+  if (document.getElementById('lock-pw').value === PASSWORD) {
+    document.getElementById('lock').classList.add('out');
+    setTimeout(() => {
+      document.getElementById('lock').style.display = 'none';
+      document.getElementById('app').classList.add('in');
+      init();
+    }, 600);
+  } else {
+    const err = document.getElementById('lock-err');
+    err.classList.add('show');
+    document.getElementById('lock-pw').value = '';
+    setTimeout(() => err.classList.remove('show'), 2500);
+  }
+}
+
+function getApiUrl() { return document.getElementById('api-url').value.trim().replace(/\/$/, ''); }
+
+async function init() {
+  checkHealth();
+  loadRecommendations();
+  loadMemory();
+  loadOutcomes();
+  loadPortfolio();
+  setInterval(checkHealth, 30000);
+}
+
+async function checkHealth() {
+  try {
+    const r = await fetch(getApiUrl() + '/health');
+    const d = await r.json();
+    const dot = document.getElementById('status-dot');
+    const txt = document.getElementById('status-text');
+    if (d.data?.db === 'connected') {
+      dot.className = 'status-dot live'; txt.textContent = 'connected';
+    } else {
+      dot.className = 'status-dot error'; txt.textContent = 'db error';
+    }
+  } catch {
+    document.getElementById('status-dot').className = 'status-dot error';
+    document.getElementById('status-text').textContent = 'offline';
+  }
+}
+
+// ── ASYNC PIPELINE WITH POLLING ───────────────────────────────────────────────
+async function runPipeline(dryRun) {
+  const btn = document.getElementById('run-btn');
+  const dryBt = document.getElementById('dry-btn');
+  const icon = document.getElementById('run-icon');
+  const label = document.getElementById('run-label');
+  const status = document.getElementById('run-status');
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressBar = document.getElementById('progress-bar');
+  const log = document.getElementById('log-panel');
+
+  btn.disabled = true; dryBt.disabled = true;
+  icon.innerHTML = '<div class="spin"></div>';
+  label.textContent = dryRun ? 'Starting dry run...' : 'Starting pipeline...';
+  log.className = 'log-panel show';
+  log.innerHTML = '';
+  progressWrap.style.display = 'block';
+  progressBar.className = 'progress-bar running';
+
+  addLog('Firing pipeline' + (dryRun ? ' (dry run)' : '') + '...', 'accent');
+
+  try {
+    // Fire and forget — returns immediately
+    const r = await fetch(getApiUrl() + '/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({dry_run: dryRun})
+    });
+    const d = await r.json();
+
+    if (d.data?.status === 'started' || d.data?.status === 'already_running') {
+      addLog('Pipeline running on server. Polling for results...', 'ok');
+      label.textContent = 'Running...';
+      status.textContent = 'polling every 5s...';
+      startPolling(btn, dryBt, icon, label, status, progressWrap, progressBar);
+    } else {
+      // Old synchronous response (fallback)
+      handleResult(d.data, btn, dryBt, icon, label, status, progressWrap, progressBar);
+    }
+  } catch(e) {
+    addLog('Error: ' + e.message, 'err');
+    resetBtn(btn, dryBt, icon, label);
+    progressWrap.style.display = 'none';
+    status.textContent = '✗ failed';
+  }
+}
+
+function startPolling(btn, dryBt, icon, label, status, progressWrap, progressBar) {
+  let attempts = 0;
+  const maxAttempts = 60; // 5 min max
+
+  pollTimer = setInterval(async () => {
+    attempts++;
+    try {
+      const r = await fetch(getApiUrl() + '/run/status');
+      const d = await r.json();
+      const s = d.data?.status || d.status;
+
+      if (s === 'running') {
+        const elapsed = attempts * 5;
+        addLog(`Still running... (${elapsed}s elapsed)`, '');
+        status.textContent = `running · ${elapsed}s`;
+      } else if (s === 'done') {
+        clearInterval(pollTimer);
+        addLog('Pipeline complete!', 'ok');
+        handleResult(d.data, btn, dryBt, icon, label, status, progressWrap, progressBar);
+      } else if (s === 'error') {
+        clearInterval(pollTimer);
+        addLog('Pipeline error: ' + (d.data?.message || 'unknown'), 'err');
+        resetBtn(btn, dryBt, icon, label);
+        progressWrap.style.display = 'none';
+        status.textContent = '✗ error';
+      } else if (s === 'idle' && attempts > 3) {
+        clearInterval(pollTimer);
+        addLog('Pipeline finished (no result stored)', 'warn');
+        resetBtn(btn, dryBt, icon, label);
+        progressWrap.style.display = 'none';
+        loadRecommendations();
+      }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(pollTimer);
+        addLog('Timeout — check Railway logs', 'warn');
+        resetBtn(btn, dryBt, icon, label);
+        progressWrap.style.display = 'none';
+      }
+    } catch(e) {
+      addLog('Poll error: ' + e.message, 'warn');
+    }
+  }, 5000);
+}
+
+function handleResult(data, btn, dryBt, icon, label, status, progressWrap, progressBar) {
+  if (!data) { resetBtn(btn, dryBt, icon, label); return; }
+
+  progressBar.className = 'progress-bar';
+  progressBar.style.width = '100%';
+  setTimeout(() => { progressWrap.style.display = 'none'; progressBar.style.width = '0%'; }, 800);
+
+  addLog(`Done in ${data.duration?.toFixed?.(1) || '?'}s — ${data.approved} approved, ${data.rejected} rejected`, 'ok');
+
+  document.getElementById('stat-approved').textContent = data.approved ?? '—';
+  document.getElementById('stat-rejected').textContent = data.rejected ?? '—';
+  document.getElementById('stat-nothing').textContent  = data.do_nothing ?? '—';
+  document.getElementById('stat-duration').textContent = data.duration?.toFixed?.(1) ?? '—';
+
+  allRecs = data.recommendations || [];
+  renderRecs(allRecs);
+  renderSignals(allRecs);
+  status.textContent = `✓ ${data.approved} approved`;
+  resetBtn(btn, dryBt, icon, label);
+  loadRecommendations();
+}
+
+function resetBtn(btn, dryBt, icon, label) {
+  btn.disabled = false; dryBt.disabled = false;
+  icon.textContent = '▶'; label.textContent = 'Run Pipeline';
+}
+
+function addLog(msg, type) {
+  const log = document.getElementById('log-panel');
+  const now = new Date().toTimeString().slice(0,8);
+  const el = document.createElement('div');
+  el.className = 'log-line';
+  el.innerHTML = `<span class="log-ts">${now}</span><span class="log-msg ${type}">${msg}</span>`;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ── RECOMMENDATIONS ───────────────────────────────────────────────────────────
+async function loadRecommendations() {
+  try {
+    const r = await fetch(getApiUrl() + '/recommendations?status=all&limit=100');
+    const d = await r.json();
+    if (d.status === 'ok' && d.data?.length) {
+      allRecs = d.data;
+      renderRecs(allRecs);
+      const approved = d.data.filter(r => r.gatekeeper === 'APPROVED').length;
+      const rejected = d.data.filter(r => r.gatekeeper === 'REJECTED').length;
+      document.getElementById('stat-approved').textContent = approved;
+      document.getElementById('stat-rejected').textContent = rejected;
+    }
+  } catch {}
+}
+
+function renderRecs(recs) {
+  const list = document.getElementById('rec-list');
+  let filtered = recs;
+  if (currentFilter === 'approved') filtered = recs.filter(r => (r.gatekeeper||r.verdict) === 'APPROVED');
+  else if (currentFilter === 'rejected') filtered = recs.filter(r => (r.gatekeeper||r.verdict) === 'REJECTED');
+  else if (currentFilter === 'DO_NOTHING') filtered = recs.filter(r => (r.rec_type||r.type) === 'DO_NOTHING');
+  document.getElementById('rec-count').textContent = filtered.length + ' items';
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-big">∅</div><div>No recommendations in this category</div></div>';
+    return;
+  }
+  list.innerHTML = filtered.map((r,i) => {
+    const verdict = r.gatekeeper || r.verdict || 'PENDING';
+    const type    = r.rec_type || r.type || '';
+    const action  = r.action || '—';
+    const why     = r.why || '';
+    const conf    = r.confidence || '';
+    const lever   = r.lever || '';
+    const cause   = typeof r.cause_json === 'string' ? JSON.parse(r.cause_json||'{}') : (r.cause_json || r.cause || {});
+    const causeName = cause?.diagnosed_cause || '';
+    const payload = typeof r.payload === 'string' ? (JSON.parse(r.payload||'{}')) : (r.payload||r);
+    const kpiDelta = payload?.kpi_delta_estimate || r.kpi_delta_estimate || '';
+    const isApproved = verdict === 'APPROVED';
+    const isNothing  = type === 'DO_NOTHING';
+    const cardClass  = isNothing ? 'do-nothing' : (isApproved ? 'approved' : 'rejected');
+    const verdBadge  = isNothing ? 'badge-nothing' : (isApproved ? 'badge-approved' : 'badge-rejected');
+    const confBadge  = conf === 'High' ? 'badge-conf-high' : conf === 'Medium' ? 'badge-conf-medium' : 'badge-conf-low';
+    const actions    = isApproved && !isNothing ? `
+      <div class="rec-actions">
+        <button class="act-btn act-implement" onclick="implement(${r.id||i},this)">Mark Implemented</button>
+        <button class="act-btn act-reject" onclick="rejectRec(${r.id||i},this)">Reject</button>
+      </div>` : '';
+    const rejectReason = !isApproved && r.reject_reason ?
+      `<div class="rec-why" style="border-color:var(--red-l);color:var(--ink4)">✗ ${r.reject_reason}</div>` : '';
+    return `<div class="rec-card ${cardClass}">
+      <div class="rec-top">
+        <div class="rec-action">${action}</div>
+        <div class="rec-badges">
+          <span class="badge badge-type">${(type||'').replace(/_/g,' ')}</span>
+          ${conf?`<span class="badge ${confBadge}">${conf}</span>`:''}
+          <span class="badge ${verdBadge}">${verdict}</span>
+        </div>
+      </div>
+      ${why?`<div class="rec-why">${why}</div>`:''}
+      ${rejectReason}
+      <div class="rec-meta">
+        ${lever?`<div class="rec-meta-item"><strong>lever</strong> ${lever}</div>`:''}
+        ${causeName?`<div class="rec-meta-item"><strong>cause</strong> ${causeName}</div>`:''}
+        ${kpiDelta?`<div class="rec-meta-item"><strong>expected</strong> ${kpiDelta}</div>`:''}
+        ${r.campaign?`<div class="rec-meta-item"><strong>campaign</strong> ${r.campaign}</div>`:''}
+      </div>
+      ${actions}
+    </div>`;
+  }).join('');
+}
+
+function filterRecs(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRecs(allRecs);
+}
+
+async function implement(recId, btn) {
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const r = await fetch(getApiUrl() + '/implement', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({rec_id: recId})
+    });
+    const d = await r.json();
+    if (d.status === 'ok') { btn.className = 'act-btn act-done'; btn.textContent = '✓ Implemented'; }
+    else { btn.textContent = 'Error'; }
+  } catch { btn.textContent = 'Failed'; }
+}
+
+async function rejectRec(recId, btn) {
+  try {
+    await fetch(getApiUrl() + '/feedback', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({rec_id: recId, feedback: 'rejected'})
+    });
+    btn.textContent = '✓ Rejected'; btn.disabled = true;
+  } catch {}
+}
+
+function renderSignals(recs) {
+  const grid = document.getElementById('signal-grid');
+  const seen = new Set();
+  const camps = recs.filter(r => { if(!r.campaign||seen.has(r.campaign)) return false; seen.add(r.campaign); return true; });
+  document.getElementById('signal-count').textContent = camps.length + ' campaigns';
+  if (!camps.length) return;
+  grid.innerHTML = camps.map(r => {
+    const p = typeof r.payload === 'string' ? JSON.parse(r.payload||'{}') : (r.payload||r);
+    const cls = p.classification || r.classification || '';
+    const clsClass = {SCALABLE:'cls-scalable',SATURATION:'cls-saturation',DIMINISHING:'cls-diminishing'}[cls]||'cls-low';
+    return `<div class="signal-card">
+      <div class="signal-name">${r.campaign}</div>
+      <span class="signal-class ${clsClass}">${cls||'unknown'}</span>
+      <div class="signal-metrics">
+        <div class="sig-metric"><div class="sig-metric-l">CPA before</div><div class="sig-metric-v">${r.cpa_before?'₹'+Math.round(r.cpa_before):'—'}</div></div>
+        <div class="sig-metric"><div class="sig-metric-l">lever</div><div class="sig-metric-v">${r.lever||'—'}</div></div>
+        <div class="sig-metric"><div class="sig-metric-l">confidence</div><div class="sig-metric-v">${r.confidence||'—'}</div></div>
+        <div class="sig-metric"><div class="sig-metric-l">segment</div><div class="sig-metric-v">${r.segment||'—'}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadMemory() {
+  try {
+    const r = await fetch(getApiUrl() + '/memory');
+    const d = await r.json();
+    if (d.status !== 'ok') return;
+    const scores = d.data?.accuracy_scores || {};
+    const grid = document.getElementById('memory-grid');
+    if (!Object.keys(scores).length) return;
+    grid.innerHTML = Object.entries(scores).map(([lever, score]) => {
+      const pct = Math.round(score * 100);
+      return `<div class="mem-item">
+        <div class="mem-lever">${lever.replace(/_/g,' ')}</div>
+        <div class="mem-bar-wrap"><div class="mem-bar" style="width:${pct}%"></div></div>
+        <div class="mem-score">${pct}%</div>
+      </div>`;
+    }).join('');
+    const h = d.data?.run_history||[];
+    if (h.length) {
+      document.getElementById('stat-approved').textContent = h[0]?.recs_approved ?? '—';
+      document.getElementById('stat-rejected').textContent = h[0]?.recs_rejected ?? '—';
+    }
+  } catch {}
+}
+
+async function loadOutcomes() {
+  try {
+    const r = await fetch(getApiUrl() + '/outcomes');
+    const d = await r.json();
+    const list = document.getElementById('outcomes-list');
+    if (d.status !== 'ok' || !d.data?.length) return;
+    list.innerHTML = d.data.map(o => {
+      const delta = o.kpi_delta || 0;
+      const pct = (delta * 100).toFixed(1);
+      const outClass = o.outcome === 'POSITIVE' ? 'pos' : o.outcome === 'NEGATIVE' ? 'neg' : 'neu';
+      const icon = o.outcome === 'POSITIVE' ? '↑' : o.outcome === 'NEGATIVE' ? '↓' : '–';
+      return `<div class="outcome-card">
+        <div class="outcome-icon ${outClass}">${icon}</div>
+        <div class="outcome-info">
+          <div class="outcome-action">${o.action||'—'}</div>
+          <div class="outcome-meta">${o.campaign||''} · ${o.lever||''} · ${o.confirmed_at?.slice(0,10)||''}</div>
+        </div>
+        <div class="outcome-delta ${outClass}">${delta>0?'+':''}${pct}%</div>
+      </div>`;
+    }).join('');
+  } catch {}
+}
+
+async function loadPortfolio() {
+  try {
+    const r = await fetch(getApiUrl() + '/portfolio');
+    const d = await r.json();
+    const grid = document.getElementById('portfolio-grid');
+    if (d.status !== 'ok') return;
+    const spend = d.data?.current_daily_spend || {};
+    const caps  = d.data?.category_caps || {};
+    const cats  = Object.keys(spend);
+    if (!cats.length) return;
+    grid.innerHTML = cats.map(cat => {
+      const s = spend[cat]||0, cap = caps[cat]||0;
+      const pct = cap > 0 ? Math.min(100,(s/cap)*100) : 0;
+      return `<div class="portfolio-card">
+        <div class="portfolio-cat">${cat.replace(/_/g,' ')}</div>
+        <div class="portfolio-spend">₹${Math.round(s).toLocaleString()}<span style="font-size:11px;font-weight:300;color:var(--ink4)">/day</span></div>
+        ${cap>0?`<div class="portfolio-cap-bar"><div class="portfolio-cap-fill" style="width:${pct}%"></div></div>
+        <div class="portfolio-cap-label">${pct.toFixed(0)}% of ₹${Math.round(cap).toLocaleString()} cap</div>`
+        :'<div class="portfolio-cap-label" style="margin-top:6px">No cap set</div>'}
+      </div>`;
+    }).join('');
+  } catch {}
+}
+
+function switchTab(tab) {
+  ['recommendations','signals','portfolio','outcomes','memory'].forEach(t =>
+    document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab));
+  document.querySelectorAll('.nav-btn').forEach((btn,i) => {
+    const tabs = ['recommendations','signals','portfolio','outcomes','memory'];
+    btn.classList.toggle('active', tabs[i] === tab);
+  });
+}
+
+document.getElementById('api-url').addEventListener('change', () => {
+  checkHealth(); loadRecommendations(); loadMemory();
+});
+</script>
+</body>
+</html>
