@@ -7,8 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -47,21 +45,17 @@ body{background:var(--bg-light);color:var(--text-main);font-family:var(--font-ma
 .nav-btn{padding:18px 20px;font-size:12px;font-weight:600;color:var(--text-sub);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px}
 .nav-btn.active{color:var(--paytm-sky);border-bottom-color:var(--paytm-sky)}
 
-/* CONTENT */
+/* CARDS & CONTENT */
 .content{padding:32px;max-width:1200px;margin:0 auto}
-
-.run-section{display:flex;align-items:center;gap:12px;margin-bottom:28px;background:var(--white);padding:16px;border-radius:12px;border:1px solid var(--border-color)}
-.run-btn{background:var(--paytm-blue);border:none;padding:10px 20px;border-radius:6px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px}
-.download-btn{background:var(--white);border:1px solid var(--paytm-sky);padding:10px 20px;border-radius:6px;font-weight:600;color:var(--paytm-sky);cursor:pointer;display:flex;align-items:center;gap:8px;transition: all 0.2s}
-.download-btn:hover{background: var(--paytm-sky); color: #fff}
-
-.rec-card{background:var(--white);border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:12px;display:flex;gap:20px}
+.rec-card{background:var(--white);border:1px solid var(--border-color);border-radius:12px;padding:20px;margin-bottom:12px;display:flex;gap:20px;transition: transform 0.2s}
+.rec-card:hover{transform: translateX(4px)}
 .rec-icon-wrap{width:48px;height:48px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
 .icon-increase{background: #e8f7f0; color: var(--green)}
 .icon-decrease{background: #fef1f1; color: var(--red)}
 .icon-neutral{background: #f0f3f6; color: var(--text-sub)}
 
 .footer-credit{position:fixed;bottom:20px;right:32px;font-size:11px;font-weight:600;color:var(--text-sub);background:rgba(255,255,255,0.9);padding:8px 16px;border-radius:30px;border:1px solid var(--border-color)}
+
 .hidden{display:none!important}
 </style>
 </head>
@@ -76,29 +70,27 @@ body{background:var(--bg-light);color:var(--text-main);font-family:var(--font-ma
   </div>
 </div>
 
-<div id="app" class="hidden">
+<div id="app">
   <div class="header">
     <div class="header-brand">
        <svg class="paytm-logo-header" viewBox="0 0 512 165" xmlns="http://www.w3.org/2000/svg"><path d="M125.7 33.3c-20.5 0-37.1 16.6-37.1 37.1s16.6 37.1 37.1 37.1 37.1-16.6 37.1-37.1-16.6-37.1-37.1-37.1zm0 57.5c-11.3 0-20.4-9.1-20.4-20.4s9.1-20.4 20.4-20.4 20.4 9.1 20.4 20.4-9.1 20.4-20.4 20.4z" fill="#00baf2"/><path d="M54.1 34.6h-31v71.5h14.5V81.4h16.5c15.2 0 27.6-12.4 27.6-27.6s-12.4-19.2-27.6-19.2zm0 32.3H37.6V49.1h16.5c6.4 0 11.6 5.2 11.6 11.6.1 6.4-5.1 6.2-11.6 6.2zM216.7 34.6l-14.8 38.6-14.8-38.6h-15.6l22.4 54.3v17.2h16V88.9l22.4-54.3h-15.6zM266.6 49.1h-17.5v41.2c0 3.7 3 6.7 6.7 6.7h10.8v13.6h-12.6c-10.2 0-18.4-8.2-18.4-18.4V49.1h-9.8V34.6h9.8v-14h14.5v14h17.5v14.5zM389.2 34.6v12.2c-5.4-8.8-15.1-14.7-26.2-14.7-17.6 0-31.9 14.3-31.9 31.9s14.3 31.9 31.9 31.9c11.1 0 20.8-5.9 26.2-14.7v13.3h14.5V34.6h-14.5zm-25.2 46.8c-9.6 0-17.4-7.8-17.4-17.4s7.8-17.4 17.4-17.4 17.4 7.8 17.4 17.4-7.8 17.4-17.4 17.4z" fill="#002970"/></svg>
        <div class="header-name">Search RE</div>
     </div>
     <div class="header-right">
-      <div class="header-status"><div class="status-dot live"></div><span>System Live</span></div>
+      <input type="text" class="api-url-input" id="api-url" value="https://api-production-c43f.up.railway.app"/>
+      <div class="header-status"><div class="status-dot live"></div><span>Live</span></div>
     </div>
   </div>
 
   <div class="nav">
     <button class="nav-btn active" onclick="switchTab('recommendations')"><i data-lucide="zap"></i> Recommendations</button>
+    <button class="nav-btn" onclick="switchTab('signals')"><i data-lucide="bar-chart-3"></i> Signals</button>
   </div>
 
   <div class="content">
-    <div class="run-section">
-        <button class="run-btn"><i data-lucide="play"></i> Run Engine</button>
-        <button class="download-btn" onclick="exportToExcel()"><i data-lucide="download"></i> Download Report</button>
-    </div>
-
     <div id="tab-recommendations">
-        <div class="rec-list" id="rec-list"></div>
+        <div class="rec-list" id="rec-list">
+            </div>
     </div>
   </div>
 </div>
@@ -106,68 +98,46 @@ body{background:var(--bg-light);color:var(--text-main);font-family:var(--font-ma
 <div class="footer-credit">Created by Sandeep46.kumar@paytm.com</div>
 
 <script>
-let currentRecs = [
-    {Campaign: 'Brand_Search_India', Action: 'Increase Bid by 10%', Reason: 'High CTR (12%) & low CPA', Type: 'INCREASE'},
-    {Campaign: 'Competitor_Conquest', Action: 'Decrease Budget by 20%', Reason: 'CPA exceeding target by 40%', Type: 'DECREASE'},
-    {Campaign: 'Generic_Shopping', Action: 'No Change', Reason: 'Performance stable', Type: 'NEUTRAL'}
-];
-
+// Logic to handle Icon generation for different types
 function getIconForType(type) {
-    if (type === 'INCREASE') return { icon: 'trending-up', class: 'icon-increase' };
-    if (type === 'DECREASE') return { icon: 'trending-down', class: 'icon-decrease' };
+    if (type.includes('INCREASE') || type.includes('UP')) return { icon: 'trending-up', class: 'icon-increase' };
+    if (type.includes('DECREASE') || type.includes('DOWN')) return { icon: 'trending-down', class: 'icon-decrease' };
     return { icon: 'minus', class: 'icon-neutral' };
 }
 
-function renderRecs() {
+function renderRecs(recs) {
     const list = document.getElementById('rec-list');
-    list.innerHTML = currentRecs.map(r => {
-        const style = getIconForType(r.Type);
+    list.innerHTML = recs.map(r => {
+        const style = getIconForType(r.rec_type);
         return `
         <div class="rec-card">
-            <div class="rec-icon-wrap ${style.class}"><i data-lucide="${style.icon}"></i></div>
-            <div style="flex:1">
-                <div style="font-size: 11px; text-transform: uppercase; color: var(--paytm-sky); font-weight: 700;">${r.Campaign}</div>
-                <div style="font-weight:700; color:var(--paytm-blue); font-size: 15px;">${r.Action}</div>
-                <div style="font-size:12px; color:var(--text-sub)">${r.Reason}</div>
+            <div class="rec-icon-wrap ${style.class}">
+                <i data-lucide="${style.icon}"></i>
             </div>
-        </div>`;
+            <div style="flex:1">
+                <div style="font-weight:700; color:var(--paytm-blue)">${r.action}</div>
+                <div style="font-size:12px; color:var(--text-sub)">${r.why}</div>
+            </div>
+        </div>
+        `;
     }).join('');
-    lucide.createIcons();
-}
-
-function exportToExcel() {
-    // 1. Prepare Data
-    const dataForExport = currentRecs.map(r => ({
-        "Campaign Name": r.Campaign,
-        "Recommended Action": r.Action,
-        "Logic/Reasoning": r.Reason,
-        "Signal Type": r.Type
-    }));
-
-    // 2. Create Workbook
-    const worksheet = XLSX.utils.json_to_sheet(dataForExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Recommendations");
-
-    // 3. Branded Filename with Date
-    const date = new Date().toISOString().split('T')[0];
-    const fileName = `Paytm_SearchRE_Report_${date}.xlsx`;
-
-    // 4. Trigger Download
-    XLSX.writeFile(workbook, fileName);
+    lucide.createIcons(); // Re-initialize icons after rendering
 }
 
 const PASSWORD = 'paytm@RE2026';
 function tryUnlock() {
     if (document.getElementById('lock-pw').value === PASSWORD) {
         document.getElementById('lock').classList.add('out');
-        document.getElementById('app').classList.remove('hidden');
-        setTimeout(() => { renderRecs(); }, 400);
+        setTimeout(() => { document.getElementById('app').classList.add('in'); lucide.createIcons(); }, 400);
     }
 }
 
-// Initial Call
-lucide.createIcons();
+// Simulated data for demo
+renderRecs([
+    {action: 'Increase Bid on Brand', why: 'High CTR detected', rec_type: 'INCREASE_BID'},
+    {action: 'Decrease Daily Budget', why: 'CPA exceeding limit', rec_type: 'DECREASE_BUDGET'},
+    {action: 'Keep Status Quo', why: 'Campaign performing within range', rec_type: 'DO_NOTHING'}
+]);
 </script>
 </body>
 </html>
