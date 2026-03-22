@@ -182,7 +182,7 @@ def upsert_campaign_config(cfg: dict):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, (
-                cfg["campaign"], cfg.get("product", "unknown"),
+                cfg["campaign_id"], cfg.get("product", "unknown"),
                 cfg.get("kpi", "CPA"), cfg.get("target_value", 250),
                 cfg.get("active", True), cfg.get("scope", "include"),
                 cfg.get("max_actions_per_day", 2),
@@ -212,7 +212,7 @@ def save_recommendations(recs: list[dict]) -> list[int]:
                     r.get("type"), r.get("lever"), r.get("action"),
                     json.dumps(r.get("cause", {})), r.get("confidence"),
                     r.get("verdict", "PENDING"), r.get("rejection_reason"),
-                    r.get("cpa_before"), json.dumps(r, allow_nan=False, default=lambda x: None if x != x or x == float('inf') or x == float('-inf') else str(x))
+                    r.get("cpa_before"), json.dumps(r, default=lambda x: None if isinstance(x, float) and (x != x or abs(x) == float("inf")) else str(x))
                 ))
                 ids.append(cur.fetchone()["id"])
         conn.commit()
@@ -353,10 +353,10 @@ def get_memory_context(lookback: int = 10) -> dict:
             recent = [dict(row) for row in cur.fetchall()]
 
             cur.execute("""
-                SELECT campaign, rec_type, COUNT(*) AS times
+                SELECT campaign_id, rec_type, COUNT(*) AS times
                 FROM recommendations
                 WHERE human_feedback = 'rejected'
-                GROUP BY campaign, rec_type
+                GROUP BY campaign_id, rec_type
                 HAVING COUNT(*) >= 2
             """)
             repeat_rejects = [dict(row) for row in cur.fetchall()]
