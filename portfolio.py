@@ -76,7 +76,7 @@ def compute_portfolio_impact(rec: dict, all_signals: list[dict],
 
     return {
         "category":              product,
-        "category_headroom":     None if headroom == float("inf") else round(headroom, 2),
+        "category_headroom":     None if headroom == float("inf") else "category_headroom":     None if headroom == float("inf") else round(headroom, 2),
         "cannibalization_risk":  cannibal_risk,
         "account_impact_pct":    impact_pct,
         "portfolio_verdict":     "BLOCKED" if blocked_reasons else "CLEAR",
