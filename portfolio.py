@@ -76,7 +76,7 @@ def compute_portfolio_impact(rec: dict, all_signals: list[dict],
 
     return {
         "category":              product,
-"category_headroom": None if headroom == float("inf") else round(headroom, 2),
+"category_headroom":     None if headroom == float("inf") else round(headroom, 2),
 return {
         "category":              product,
         "category_headroom": None if headroom == float("inf") else round(headroom, 2),
