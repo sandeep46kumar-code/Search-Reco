@@ -353,10 +353,10 @@ def get_memory_context(lookback: int = 10) -> dict:
             recent = [dict(row) for row in cur.fetchall()]
 
             cur.execute("""
-                SELECT campaign_id, rec_type, COUNT(*) AS times
+                SELECT campaign, rec_type, COUNT(*) AS times
                 FROM recommendations
                 WHERE human_feedback = 'rejected'
-                GROUP BY campaign_id, rec_type
+                GROUP BY campaign, rec_type
                 HAVING COUNT(*) >= 2
             """)
             repeat_rejects = [dict(row) for row in cur.fetchall()]
