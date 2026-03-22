@@ -5,6 +5,7 @@ KPI-aware: handles CPA, ROAS, CPL, CPC_CAP, VOLUME.
 """
 import math
 from memory import get_all_active_configs, DEFAULT_LEVER_WEIGHTS
+from stability import analyze_stability, blend_primary_recency, get_attribution_windows
 
 
 def compute_primary_metric(cost: float, conversions: float, conv_value: float,
@@ -51,7 +52,7 @@ def assign_confidence(conversions: float, clicks: float) -> str:
     return "LOW_CONFIDENCE"
 
 
-def normalize(df, configs: list[dict] = None) -> list[dict]:
+def normalize(df, configs: list[dict] = None, attribution_n: int = 14) -> list[dict]:
     """
     Convert raw campaign DataFrame to canonical signal list.
     configs: list of campaign config dicts from DB (optional — uses defaults if None).
@@ -134,6 +135,12 @@ def normalize(df, configs: list[dict] = None) -> list[dict]:
             "ctr":               round(ctr * 100, 3),
             "cvr":               round(cvr * 100, 3),
             "cpa_volatility":    round(volatility, 3),
+            "attribution_n":     attribution_n,
+            "data_window":        get_attribution_windows(attribution_n)["primary_label"],
+            "recency_label":      get_attribution_windows(attribution_n)["recency_label"],
+            "full_window_label":  get_attribution_windows(attribution_n)["full_label"],
+            "stability_flag":     "UNKNOWN",
+            "weighted_metric":    None,
 
             # IS fields
             "is_lost_budget":    round(is_lost_budget, 3),
