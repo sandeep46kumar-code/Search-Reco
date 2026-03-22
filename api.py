@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Allow frontend to call from any origin
+CORS(app, origins="*", supports_credentials=False)  # Allow frontend to call from any origin
 
 
 # ── STARTUP ───────────────────────────────────────────────────────────────────
