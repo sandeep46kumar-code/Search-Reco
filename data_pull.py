@@ -93,9 +93,18 @@ def _pull_from_api(customer_id: str, days: int) -> pd.DataFrame:
           segments.date
         FROM campaign
         WHERE segments.date BETWEEN '{start_date}' AND '{end_date}'
-          AND campaign.advertising_channel_type = 'SEARCH'
-          AND campaign.status = 'ENABLED'
-        ORDER BY segments.date DESC
+          AND search_term_view.status = 'NONE'
+        ORDER BY metrics.cost_micros DESC
+        LIMIT 500
+```
+
+The change is:
+- `!= 'EXCLUDED'` → `= 'NONE'` — only unactioned search terms
+- Added `LIMIT 500` — top 500 by spend only
+
+Commit directly to main. Then also commit the `Procfile` timeout fix if you haven't already:
+```
+web: gunicorn api:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     """
 
     rows = []
