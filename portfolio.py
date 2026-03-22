@@ -76,8 +76,16 @@ def compute_portfolio_impact(rec: dict, all_signals: list[dict],
 
     return {
         "category":              product,
-        "category_headroom":     None if headroom == float("inf") else "category_headroom":     None if headroom == float("inf") else round(headroom, 2),
-        "cannibalization_risk":  cannibal_risk,
+"category_headroom":     None if headroom == float("inf") else round(headroom, 2),
+```
+
+Make sure there are no duplicate lines, no extra code — just that one clean line with 8 spaces of indentation before it.
+
+Commit directly to main.
+
+**To confirm what's actually there right now**, go to:
+```
+https://github.com/sandeep46kumar-code/Search-Reco/blob/main/portfolio.py#L79        "cannibalization_risk":  cannibal_risk,
         "account_impact_pct":    impact_pct,
         "portfolio_verdict":     "BLOCKED" if blocked_reasons else "CLEAR",
         "blocked_reasons":       blocked_reasons,
