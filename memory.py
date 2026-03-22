@@ -212,7 +212,7 @@ def save_recommendations(recs: list[dict]) -> list[int]:
                     r.get("type"), r.get("lever"), r.get("action"),
                     json.dumps(r.get("cause", {})), r.get("confidence"),
                     r.get("verdict", "PENDING"), r.get("rejection_reason"),
-                    r.get("cpa_before"), json.dumps(r)
+                    r.get("cpa_before"), json.dumps(r, allow_nan=False, default=lambda x: None if x != x or x == float('inf') or x == float('-inf') else str(x))
                 ))
                 ids.append(cur.fetchone()["id"])
         conn.commit()
