@@ -44,7 +44,7 @@ def run_outcome_analysis():
     # Pull current data once
     customer_id = os.getenv("CUSTOMER_ID", "demo")
     try:
-        df      = pull_campaign_data(customer_id, days=7)
+        df      = pull_campaign_data(customer_id, days=14)
         signals = normalize(df)
         signal_map = {s["name"]: s for s in signals}
     except Exception as e:
@@ -111,4 +111,11 @@ def run_outcome_analysis():
 
 
 if __name__ == "__main__":
-    run_outcome_analysis()
+    import sys
+    try:
+        run_outcome_analysis()
+        sys.exit(0)
+    except Exception as e:
+        print(f"FATAL: outcome_tracker failed: {e}")
+        import traceback; traceback.print_exc()
+        sys.exit(1)
